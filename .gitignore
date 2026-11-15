@@ -1,0 +1,12 @@
+node_modules/
+tests/reports/*.json
+tests/reports/*.html
+tests/reports/*.pdf
+screenshots/
+videos/
+*.log
+.DS_Store
+.claude/
+
+# Working notes of the exploration of the screens, kept out of the package.
+exploration/

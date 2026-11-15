@@ -1,0 +1,64 @@
+{
+  "name": "@webship-js/jira-steps",
+  "version": "2.0.0",
+  "description": "Cucumber step definitions for testing Jira Software Data Center sites with webship-js.",
+  "main": "tests/step-definitions/jira-session.steps.js",
+  "files": [
+    "tests/step-definitions/*.js",
+    "tests/features",
+    "assets/logo.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "cucumber-js --config cucumber.js",
+    "test:chromium": "BROWSER=chromium cucumber-js --config cucumber.js",
+    "test:firefox": "BROWSER=firefox cucumber-js --config cucumber.js",
+    "test:webkit": "BROWSER=webkit cucumber-js --config cucumber.js",
+    "test:headed": "HEADLESS=false cucumber-js --config cucumber.js",
+    "test:examples": "node scripts/check-examples.js",
+    "generate-reports": "generate-reports"
+  },
+  "keywords": [
+    "jira",
+    "jira-software",
+    "issue-tracker",
+    "webship-js",
+    "cucumber",
+    "cucumber-js",
+    "playwright",
+    "bdd",
+    "testing",
+    "e2e",
+    "gherkin"
+  ],
+  "author": "Webship.co",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webship/jira-steps.git"
+  },
+  "bugs": {
+    "url": "https://github.com/webship/jira-steps/issues"
+  },
+  "homepage": "https://github.com/webship/jira-steps#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">= 20.0"
+  },
+  "peerDependencies": {
+    "webship-js": "^2.0.10"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.0",
+    "webship-js": "^2.0.10"
+  },
+  "overrides": {
+    "@cucumber/cucumber": "^12"
+  },
+  "dependencies": {
+    "webship-js": "~2.0.0"
+  }
+}
