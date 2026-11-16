@@ -275,8 +275,8 @@ reference features run against, with Docker Compose
 ([`site/docker-compose.yml`](site/docker-compose.yml)):
 
 - Jira Software Data Center `11.3.13` from the official container image
-  (`atlassian/jira-software`), with its own PostgreSQL 16 container, at
-  `http://localhost:2990`;
+  `atlassian/jira-software:11.3.13` on Docker Hub (about 1.3 GB), with its own
+  PostgreSQL 16 container (`postgres:16-alpine`), at `http://localhost:2990`;
 - the setup wizard driven by the script, no person at the keyboard;
 - the accounts `admin`, `alex` and `sam`;
 - a Scrum project `SCRUM` ("Scrum Sample") and a Kanban project `KAN`
@@ -285,7 +285,7 @@ reference features run against, with Docker Compose
 
 ```bash
 site/build-jira-site.sh           # build (or finish building) the site and seed it
-site/build-jira-site.sh status    # the state of the application and the licence expiry
+site/build-jira-site.sh status    # the state of the application and the licence expiry (exit 1 once expired)
 site/build-jira-site.sh renew     # restart the application: a new 3-hour licence window
 site/build-jira-site.sh down      # stop and remove the containers and the volumes
 ```
@@ -301,16 +301,36 @@ licence. The build uses the **timebomb licence Atlassian publishes for testing
 Data Center products** ("10 user Jira Software Data Center license, expires in
 3 hours") from
 <https://developer.atlassian.com/platform/marketplace/timebomb-licenses-for-testing-server-apps/>.
+No account, trial or sign-up is involved.
 
+- It is a licence for testing only: the site it unlocks is a test site, not
+  one to work on.
 - No licence key is in this repository. The script reads the key from the
   `JIRA_LICENSE` environment variable; when it is empty, it downloads the key
-  from that page at build time.
-- The licence counts three hours from the start of the application.
+  from that page at build time. If the page stops publishing the key, the
+  build stops and says so; set `JIRA_LICENSE` then.
+- The licence counts three hours from the start of the application. Once they
+  are over, the boards stop answering (`/rest/agile/1.0/board` gives every
+  account "You currently don't have access to perform this operation.") and
+  the suite fails.
+  `site/build-jira-site.sh status` prints when the window closes and exits 1
+  once it has; `build` stops on an expired licence and says so;
   `site/build-jira-site.sh renew` restarts the application and starts a new
-  window; the data stays.
+  window, and the data stays.
 - It allows ten accounts, which is enough for the three of the suite.
 - To test against a site of your own, with your own licence, skip the build
   and point `LAUNCH_URL` and the `JIRA_*` variables at it.
+
+### In CI
+
+The workflow ([`.github/workflows/test.yml`](.github/workflows/test.yml))
+builds the same site on the GitHub runner with the same script, downloads the
+test licence at run time (or takes the optional `JIRA_LICENSE` repository
+secret), checks the examples and runs the dry run, then runs the whole browser
+suite twice, on every push to `2.0.x` and on every pull request. A run takes
+about 25 minutes, well inside the licence window. The report (JSON and HTML)
+and, for a failed run, the screenshots (and the videos, when `WEBSHIP_VIDEO`
+turns recording on) are kept as artifacts for 14 days.
 
 ## Running the suite of this repository
 

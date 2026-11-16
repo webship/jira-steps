@@ -6,7 +6,7 @@
 #
 #   ./build-jira-site.sh            build (or finish building) the site and seed it
 #   ./build-jira-site.sh renew      restart the application so the test licence starts a new 3-hour window
-#   ./build-jira-site.sh status     print the application state and the licence expiry
+#   ./build-jira-site.sh status     print the application state and the licence expiry (exit 1 once it has expired)
 #   ./build-jira-site.sh down       stop and remove the containers and volumes
 #
 # Licence. There is no free self-hosted edition. The script uses the "10 user
@@ -16,7 +16,10 @@
 # It reads the key from the JIRA_LICENSE environment variable, and when that is
 # empty it downloads the key from that page at build time. No key is stored in
 # this script or in the repository. The licence counts its three hours from the
-# start of the application: `renew` restarts it and starts a new window.
+# start of the application: `renew` restarts it and starts a new window. Once the
+# window has closed, the boards refuse every account ("You currently don't have
+# access to perform this operation."); `build` and `status` say so and point to
+# `renew` instead of waiting.
 #
 # What the build leaves on the site (the suite relies on it and never changes it):
 #   accounts   admin (administrator), alex and sam (ordinary users)
@@ -155,11 +158,28 @@ api() {
   printf '%s' "$out"
 }
 
+LICENCE_RESOURCE='/rest/plugins/applications/1.0/installed/jira-software/license'
+EXPIRED_HINT="the licence is not valid: the test licence lasts three hours from the start of the application. Start a new window with: $0 renew"
+
+licence_valid() {
+  # "true" or "false" once the licence resource answers for the signed-in administrator; nothing before.
+  curl -s --max-time 20 -b "$SESSION" -H 'Accept: */*' "$BASE$LICENCE_RESOURCE" | python3 -c '
+import json, sys
+try:
+    print("true" if json.load(sys.stdin).get("valid") else "false")
+except Exception:
+    pass' 2>/dev/null || true
+}
+
 wait_for_apps() {
   # The application answers RUNNING a little before its apps (boards, licences) do: wait for them.
-  local waited=0
+  # An expired licence keeps the boards closed for good: stop on it at once instead of waiting.
+  local waited=0 invalid=0
   until curl -s -o /dev/null -b "$SESSION" -w '%{http_code}' "$BASE/rest/agile/1.0/board" | grep -q '^200$' \
-     && curl -s -o /dev/null -b "$SESSION" -H 'Accept: */*' -w '%{http_code}' "$BASE/rest/plugins/applications/1.0/installed/jira-software/license" | grep -q '^200$'; do
+     && [ "$(licence_valid)" = "true" ]; do
+    # Six answers in a row (about half a minute), so a start that is not quite finished does not count.
+    if [ "$(licence_valid)" = "false" ]; then invalid=$((invalid + 1)); else invalid=0; fi
+    [ "$invalid" -ge 6 ] && fail "$EXPIRED_HINT"
     [ "$waited" -ge 600 ] && fail "the boards and licence resources did not answer within 600s; see: docker compose logs jira"
     sleep 5; waited=$((waited + 5))
     # A restart ends the session: sign in again once the sign-in resource is back.
@@ -181,14 +201,21 @@ case "${1:-build}" in
     wait_for_state 600 RUNNING
     sign_in_when_ready
     wait_for_apps
-    api GET '/rest/plugins/applications/1.0/installed/jira-software/license' | json "'licence valid:', d.get('valid'), '| expires:', __import__('datetime').datetime.fromtimestamp(d['expiryDate'] / 1000).strftime('%Y-%m-%d %H:%M')"
+    api GET "$LICENCE_RESOURCE" | json "'licence valid:', d.get('valid'), '| expires:', __import__('datetime').datetime.fromtimestamp(d['expiryDate'] / 1000).strftime('%Y-%m-%d %H:%M')"
     exit 0
     ;;
   status)
-    sign_in_when_ready
-    wait_for_apps >/dev/null
     echo "state: $(state)"
-    api GET '/rest/plugins/applications/1.0/installed/jira-software/license' | json "'licence valid:', d.get('valid'), '| users:', d.get('maximumNumberOfUsers'), '| expires:', __import__('datetime').datetime.fromtimestamp(d['expiryDate'] / 1000).strftime('%Y-%m-%d %H:%M')" || true
+    sign_in_when_ready
+    # The licence resource answers whether the licence is valid or not: wait for it only.
+    waited=0
+    until [ -n "$(licence_valid)" ]; do
+      [ "$waited" -ge 600 ] && fail "the licence resource did not answer within 600s; see: docker compose logs jira"
+      sleep 5; waited=$((waited + 5))
+      sign_in 2>/dev/null || true
+    done
+    api GET "$LICENCE_RESOURCE" | json "'licence valid:', d.get('valid'), '| users:', d.get('maximumNumberOfUsers'), '| expires:', __import__('datetime').datetime.fromtimestamp(d['expiryDate'] / 1000).strftime('%Y-%m-%d %H:%M')"
+    [ "$(licence_valid)" = "true" ] || fail "$EXPIRED_HINT"
     exit 0
     ;;
   build) ;;
@@ -305,5 +332,5 @@ fi
 
 say "Done"
 api GET /rest/api/2/serverInfo | json "'Jira Software', d['version'], 'at', d['baseUrl']"
-api GET '/rest/plugins/applications/1.0/installed/jira-software/license' | json "'licence:', d.get('organizationName'), '| users:', d.get('maximumNumberOfUsers'), '| expires:', __import__('datetime').datetime.fromtimestamp(d['expiryDate'] / 1000).strftime('%Y-%m-%d %H:%M')"
+api GET "$LICENCE_RESOURCE" | json "'licence:', d.get('organizationName'), '| users:', d.get('maximumNumberOfUsers'), '| expires:', __import__('datetime').datetime.fromtimestamp(d['expiryDate'] / 1000).strftime('%Y-%m-%d %H:%M')"
 echo "Accounts: $ADMIN_USER, $ALEX_USER, $SAM_USER. Renew the licence window with: $0 renew"
