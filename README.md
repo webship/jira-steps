@@ -100,20 +100,39 @@ click step, close them with `When I close the messages on top of the page`.
 
 A feature never creates or deletes an account. The accounts are configuration:
 they exist on the site, and `cucumber.js` names them by a handle in
-`worldParameters.users`. This is the list the reference features expect, with
-the placeholder passwords `site/build-jira-site.sh` sets on the local test
-site (they are not credentials of any real site; override them with the
-`JIRA_*` environment variables):
+`worldParameters.users`. These are the accounts the reference features expect,
+as JSON, with the test values `site/build-jira-site.sh` sets on the local test
+site (they are not credentials of any real site):
 
-```javascript
-worldParameters: {
-  users: {
-    admin: { username: process.env.JIRA_ADMIN_USER || 'admin', password: process.env.JIRA_ADMIN_PASSWORD || 'Admin123456789!', name: 'Site Administrator' },
-    alex: { username: process.env.JIRA_ALEX_USER || 'alex', password: process.env.JIRA_ALEX_PASSWORD || 'Alex123456789!', name: 'Alex Tester' },
-    sam: { username: process.env.JIRA_SAM_USER || 'sam', password: process.env.JIRA_SAM_PASSWORD || 'Sam123456789!', name: 'Sam Reporter' },
-  },
-},
+```json
+{
+  "worldParameters": {
+    "users": {
+      "admin": {
+        "username": "admin",
+        "password": "Admin123456789!",
+        "name": "Site Administrator"
+      },
+      "alex": {
+        "username": "alex",
+        "password": "Alex123456789!",
+        "name": "Alex Tester"
+      },
+      "sam": {
+        "username": "sam",
+        "password": "Sam123456789!",
+        "name": "Sam Reporter"
+      }
+    }
+  }
+}
 ```
+
+In `cucumber.js` the usernames and passwords come from the environment
+variables `JIRA_ADMIN_USER`, `JIRA_ADMIN_PASSWORD`, `JIRA_ALEX_USER`,
+`JIRA_ALEX_PASSWORD`, `JIRA_SAM_USER` and `JIRA_SAM_PASSWORD` when they are
+set, so the suite runs against another site without a change to the file. Keep
+the passwords of a real site in environment variables, never in a repository.
 
 | Handle | Username | Password on the test site | What the account is |
 | --- | --- | --- | --- |
