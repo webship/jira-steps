@@ -101,6 +101,19 @@ wizard_post() {
     --data-urlencode "atl_token=$(token)" "${args[@]}" \
     -o "$HERE/.last-response.html" -w '%{http_code} %{redirect_url}\n' \
     "$BASE/secure/${action}.jspa"
+  # What the wizard answered with: the title of the page and the errors it shows, if any.
+  python3 - "$HERE/.last-response.html" <<'PY' || true
+import re, sys
+try:
+    page = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+except OSError:
+    sys.exit(0)
+title = re.search(r"<title>(.*?)</title>", page, re.S)
+errors = [re.sub(r"<[^>]+>|\s+", " ", e).strip() for e in re.findall(r'class="[^"]*\berror\b[^"]*"[^>]*>(.*?)</(?:div|span|p)>', page, re.S)]
+errors = [e for e in errors if e]
+if title or errors:
+    print("  page:", re.sub(r"\s+", " ", title.group(1)).strip() if title else "(no title)", "| errors:", "; ".join(errors[:5]) or "none")
+PY
 }
 
 SESSION="$(mktemp)"
@@ -187,6 +200,17 @@ docker compose up -d
 wait_for_state 900 FIRST_RUN RUNNING
 
 if [ "$(state)" = "FIRST_RUN" ]; then
+  say "Setup wizard: opening the site (this loads the starting data: the user directory, the default schemes)"
+  # The first visit goes through startup.jsp, which fills the empty database, and ends
+  # on the first page of the wizard. Without it the wizard later answers
+  # "Cannot add user, all the user directories are read-only."
+  waited=0
+  until landed="$(curl -s -L -o /dev/null -c "$COOKIES" -b "$COOKIES" --max-time 600 -w '%{url_effective}' "$BASE/")" && case "$landed" in *SetupApplicationProperties*) true ;; *) false ;; esac; do
+    [ "$waited" -ge 600 ] && fail "the first page of the setup wizard did not show within 600s (last address: ${landed:-none})"
+    sleep 5; waited=$((waited + 5))
+  done
+  echo "wizard ready at $landed"
+
   say "Setup wizard: application properties"
   wizard_post SetupApplicationProperties "title=Webship Test Site" "mode=private" "baseURL=$BASE" "nextStep=true"
 
@@ -197,10 +221,23 @@ if [ "$(state)" = "FIRST_RUN" ]; then
   unset KEY
 
   say "Setup wizard: administrator account"
-  wizard_post SetupAdminAccount "fullname=Site Administrator" "email=admin@example.com" "username=$ADMIN_USER" "password=$ADMIN_PASSWORD" "confirm=$ADMIN_PASSWORD"
+  # The user directory comes up a little after the licence is accepted: until then the
+  # wizard answers "Cannot add user, all the user directories are read-only." Try again.
+  waited=0
+  while :; do
+    answer="$(wizard_post SetupAdminAccount "fullname=Site Administrator" "email=admin@example.com" "username=$ADMIN_USER" "password=$ADMIN_PASSWORD" "confirm=$ADMIN_PASSWORD")"
+    printf '%s\n' "$answer"
+    case "$answer" in *"errors: none"*|302*) [ "${answer#*errors: }" = "$answer" ] || [ "${answer##*errors: }" = "none" ] && break ;; esac
+    [ "$waited" -ge 300 ] && fail "the wizard did not accept the administrator account within 300s"
+    sleep 10; waited=$((waited + 10))
+  done
 
   say "Setup wizard: no outgoing mail"
-  wizard_post SetupMailNotifications "noemail=true"
+  answer="$(wizard_post SetupMailNotifications "noemail=true")"
+  printf '%s\n' "$answer"
+  # A redirect to the welcome page or a "Loading..." page both mean the wizard is done;
+  # the sign-in below is the proof.
+  case "$answer" in 302*|200*"errors: none"*) ;; *) fail "the last step of the wizard failed; see: docker compose logs jira" ;; esac
 
   wait_for_state 600 RUNNING
 fi
