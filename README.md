@@ -360,7 +360,11 @@ site/build-jira-site.sh
 npm test
 ```
 
-`FEATURES=tests/features/issues.feature npm test` runs one feature,
+`npx cucumber-js tests/features/issues.feature` runs one feature and
+`npx cucumber-js tests/features/issues.feature:<line>` one scenario (the line of
+its `Scenario:`; the paths of `cucumber.js` are left out when the command line
+names any, and `npm run test:paths` checks it);
+`FEATURES=tests/features/issues.feature npm test` runs one feature too,
 `CUCUMBER_TAGS=@critical npm test` the smoke lane. `npm run test:examples` and
 `npx cucumber-js --dry-run` need no site.
 
