@@ -1,6 +1,6 @@
 {
   "name": "@webship-js/jira-steps",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Cucumber step definitions for testing Jira Software Data Center sites with webship-js.",
   "main": "tests/step-definitions/jira-session.steps.js",
   "files": [
