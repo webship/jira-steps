@@ -121,8 +121,19 @@ A green first run prints every step, then the summary (the starter feature of
 it wrote:
 
 ```
-FIRSTRUN
+3 scenarios (3 passed)
+9 steps (9 passed)
+0m19.833s (executing steps: 0m19.801s)
+[webship-js] HTML report → …/jira-tests/tests/reports/cucumber_report.html
 ```
+
+The output above is from a webship-js later than 2.0.14. With 2.0.14 itself
+the starter feature fails here: `Then I should be on the homepage` compares the
+address the browser shows, and the dashboard served at `/` rewrites it to
+`/secure/Dashboard.jspa` while it loads, with no HTTP redirect; the next
+webship-js counts that address as the homepage (webship/webship-js#530). With
+2.0.14, delete `tests/features/check-homepage.feature`: the two scenarios above
+are the first run.
 
 From there, copy the features of [`tests/features/`](tests/features/) (they
 also ship in the package, under
