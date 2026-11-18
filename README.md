@@ -83,6 +83,8 @@ module.exports = {
       launchUrl: process.env.LAUNCH_URL || 'http://localhost:2990',
       // The waits webship-js adds around each page, scenario and step (milliseconds).
       minWaitTime: { page: 3000, before_scenario: 0, after_scenario: 0, before_step: 0, after_step: 0 },
+      // Chromium's note about the unload handlers of Jira's own scripts is not an error of the site.
+      javascript: { ignore: 'Permissions policy violation: unload is not allowed' },
       // The accounts of the test site; keep the passwords of a real site in the environment.
       users: {
         admin: { username: 'admin', password: process.env.JIRA_ADMIN_PASSWORD || 'Admin123456789!', name: 'Site Administrator' },
@@ -126,6 +128,12 @@ it wrote:
 0m19.833s (executing steps: 0m19.801s)
 [webship-js] HTML report → …/jira-tests/tests/reports/cucumber_report.html
 ```
+
+A run may also print one "JavaScript errors … (mode=warn)" block with
+`Failed to load resource: the server responded with a status of 404`: the
+issue page asks for a preference a new account has not stored yet
+(`/rest/api/2/mypreferences?key=…`). It is the site's own request, and the run
+stays green.
 
 The output above is from a webship-js later than 2.0.14. With 2.0.14 itself
 the starter feature fails here: `Then I should be on the homepage` compares the
