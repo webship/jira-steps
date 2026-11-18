@@ -12,6 +12,7 @@ Feature: Signing in and out
     And I am on the sign-in page
     Then I should see the sign-in form
     And I should not be signed in
+    And I should not see the sign-in error "Incorrect username or password."
 
   @critical
   Scenario: An account of the registry signs in

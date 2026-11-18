@@ -45,6 +45,7 @@ Feature: The backlog and a sprint
     When I start the sprint "Suite Sprint"
     Then I should see the success message "Sprint Suite Sprint has successfully been started."
     And the board should show the sprint "Suite Sprint"
+    And the board should not show the sprint "Suite Planning Sprint"
     And the board columns should be "To Do, In Progress, Done"
     And the card "Suite: sprint work" should be in the "To Do" column
     When I move the card "Suite: sprint work" to the "In Progress" column

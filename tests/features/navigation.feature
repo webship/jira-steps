@@ -14,6 +14,7 @@ Feature: The top navigation and the project sidebar
     And I should see the "Boards" menu in the top navigation
     And I should not see the "Administration" menu in the top navigation
     And the application version should start with "11."
+    And the application version should not start with "10."
 
   Scenario: The top navigation of an administrator has the Administration menu
     Given I am signed in as "admin"
@@ -40,6 +41,13 @@ Feature: The top navigation and the project sidebar
     And I should see "Manage Dashboards" in the "Dashboards" menu of the top navigation
     And I should see "Log Out" in the "Profile" menu of the top navigation
     And I should not see "No such item" in the "Issues" menu of the top navigation
+
+  Scenario: A menu of the top navigation opens and shows its items
+    Given I am signed in as "alex"
+    And I am on the "system dashboard" screen
+    When I open the "Projects" menu of the top navigation
+    Then I should see "View All Projects"
+    And I should see "Scrum Sample (SCRUM)"
 
   Scenario: The Projects menu leads to the list of projects
     Given I am signed in as "alex"
