@@ -57,7 +57,8 @@ Feature: The life of an issue
     And I am on the "system dashboard" screen
     When I open the create issue dialog
     And I pick "Scrum Sample" in the "Project" field
-    And I submit the dialog expecting errors
+    Then I should not see the field error "You must specify a summary of the issue."
+    When I submit the dialog expecting errors
     Then the "Create Issue" dialog should be open
     And I should see the error message "There is 1 error in this form."
     And I should see the field error "You must specify a summary of the issue."
@@ -77,6 +78,11 @@ Feature: The life of an issue
     When I change the issue description to "The report has a button that saves it as a PDF file."
     Then the issue description should contain "saves it as a PDF file"
     And the issue description should not contain "spreadsheet"
+    When I open the edit issue dialog
+    Then the "Edit Issue" dialog should be open
+    When I cancel the dialog
+    Then the "Edit Issue" dialog should not be open
+    And the issue summary should be "Suite: export the report as PDF"
     Given I am signed in as "admin"
     And the issue "Suite: export the report as PDF" is removed
 
@@ -138,6 +144,8 @@ Feature: The life of an issue
     And I assign the issue to "Sam Reporter"
     Then the issue assignee should be "Sam Reporter"
     And I should see the success message "has been assigned."
+    When I close the messages on top of the page
+    Then I should not see the success message "has been assigned."
     When I assign the issue to me
     Then the issue assignee should be "Alex Tester"
     And the issue assignee should not be "Sam Reporter"
