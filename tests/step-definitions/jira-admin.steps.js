@@ -351,7 +351,7 @@ Then(/^(I |we )*should be refused the (project settings|settings of the project)
  * Example #2: Then I should see the account "sam" in the user list
  * Example #3: Then I should not see the account "nobody" in the user list
  * Example #4: And we should see the account "admin" in the user list
- * Example #5: And I should not see the account "ghost" in the user list
+ * Example #5: And I should not see the account "nobody" in the user list
  *
  */
 Then(/^(I |we )*should( not)* see the account "([^"]*)" in the user list$/, async function (pronounCase, notCase, username) {
