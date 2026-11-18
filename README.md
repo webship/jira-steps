@@ -28,6 +28,146 @@ pull request; see [`.github/workflows/test.yml`](.github/workflows/test.yml).
 > This project is not affiliated with, sponsored by or endorsed by Atlassian.
 > Jira is a registered trademark of Atlassian.
 
+## From nothing to a green run
+
+What the machine needs: git, Docker with the Compose plugin, `curl` and
+`python3` for the site; Node.js 20 or later with npm for the tests; about 4 GB of
+free memory and about 2 GB of disk for the two container images.
+
+**1. The site.** A local Jira Software Data Center, built by the script of this
+repository from the official container image, with the test licence Atlassian
+publishes (see [The licence](#the-licence)), the accounts of the suite and two
+sample projects (see [The test site](#the-test-site)):
+
+```bash
+git clone https://github.com/webship/jira-steps.git
+cd jira-steps
+site/build-jira-site.sh
+```
+
+The first start takes a few minutes. The script ends by printing the version,
+the expiry of the licence window and the accounts; the site answers at
+`http://localhost:2990`. The window lasts three hours: `site/build-jira-site.sh
+renew` starts a new one, and `site/build-jira-site.sh down` removes the site.
+
+**2. A test project**, in another folder:
+
+```bash
+mkdir jira-tests && cd jira-tests
+npm init -y
+npm install --save-dev webship-js @webship-js/jira-steps
+npx init-webship-js
+```
+
+`npx init-webship-js` writes `cucumber.js`, `playwright.config.ts`, the
+`tests/` folders with a first feature and the `npm test` scripts, and installs
+Chromium. npm usually runs it already when it installs webship-js; a second run
+changes nothing.
+
+**3. `cucumber.js`.** Replace the file with the wiring of the pack: the step
+files of webship-js and of the pack, the address of the site and the accounts
+the build made (the JSON of [Test users](#test-users)):
+
+```javascript
+module.exports = {
+  default: {
+    requireModule: ['tsx/cjs'],
+    require: [
+      'node_modules/webship-js/tests/step-definitions/**/*.js',
+      'node_modules/@webship-js/jira-steps/tests/step-definitions/*.js',
+      'tests/step-definitions/**/*.js',
+    ],
+    paths: ['tests/features/**/*.feature'],
+    format: ['@cucumber/pretty-formatter', 'json:tests/reports/cucumber_report.json'],
+    worldParameters: {
+      launchUrl: process.env.LAUNCH_URL || 'http://localhost:2990',
+      // The waits webship-js adds around each page, scenario and step (milliseconds).
+      minWaitTime: { page: 3000, before_scenario: 0, after_scenario: 0, before_step: 0, after_step: 0 },
+      // The accounts of the test site; keep the passwords of a real site in the environment.
+      users: {
+        admin: { username: 'admin', password: process.env.JIRA_ADMIN_PASSWORD || 'Admin123456789!', name: 'Site Administrator' },
+        alex: { username: 'alex', password: process.env.JIRA_ALEX_PASSWORD || 'Alex123456789!', name: 'Alex Tester' },
+        sam: { username: 'sam', password: process.env.JIRA_SAM_PASSWORD || 'Sam123456789!', name: 'Sam Reporter' },
+      },
+    },
+  },
+};
+```
+
+**4. A first feature**, `tests/features/first-run.feature`:
+
+```gherkin
+Feature: First run
+  Scenario: An account of the users registry signs in
+    Given I am signed in as "alex"
+    Then I should be signed in as "alex"
+    And the application version should start with "11."
+
+  Scenario: The issue search finds the seeded issues
+    Given I am signed in as "alex"
+    And I am on the issue search for "project = SCRUM ORDER BY key ASC"
+    Then the search should find 4 issues
+    And I should see the issue "SCRUM-1" in the search results
+```
+
+**5. Run it.**
+
+```bash
+npm test
+```
+
+A green first run prints every step, then the summary (the starter feature of
+`npx init-webship-js` and the two scenarios above, passed) and the HTML report
+it wrote:
+
+```
+3 scenarios (3 passed)
+9 steps (9 passed)
+0m19.833s (executing steps: 0m19.801s)
+[webship-js] HTML report → …/jira-tests/tests/reports/cucumber_report.html
+```
+
+The output above is from a webship-js later than 2.0.14. With 2.0.14 itself
+the starter feature fails here: `Then I should be on the homepage` compares the
+address the browser shows, and the dashboard served at `/` rewrites it to
+`/secure/Dashboard.jspa` while it loads, with no HTTP redirect; the next
+webship-js counts that address as the homepage (webship/webship-js#530). With
+2.0.14, delete `tests/features/check-homepage.feature`: the two scenarios above
+are the first run.
+
+From there, copy the features of [`tests/features/`](tests/features/) (they
+also ship in the package, under
+`node_modules/@webship-js/jira-steps/tests/features/`): together they use every
+step of the pack, against the projects of the test site.
+
+### What the suite tests
+
+The features of this repository run every step of the pack against the test
+site, and CI builds it on the runner and runs them twice on every change:
+signing in and out (an account of the registry, a wrong password, an unknown
+account, switching accounts, a page that asks to sign in), the top navigation
+and its menus, the project sidebar, the life of an issue (created in one step and
+through the dialog field by field, a summary that is required, edited, cancelled,
+moved through the workflow, commented on and the comment deleted, read by a
+second person, assigned, deleted), the fields of the issue view, the issue
+search (a query, the basic and the advanced mode, the list view, the count, an
+error, opening a result), filters (saved, opened, listed, deleted), the board
+(its columns, its cards, moving a card), the backlog and a sprint (created,
+deleted, planned, started, completed), dashboards (created, opened, their
+gadgets, deleted), the settings of a project (open to its administrator,
+refused to others), the administration area, the messages, dialogs and error
+pages along the way, and REST resources read with the browser's session. Every
+assertion runs in its positive and in its negative form.
+
+What a run leaves: the issue counters of the two projects (the site never
+reuses an issue number, so the keys of the issues a run creates and deletes go
+up from one run to the next); the issues, comments, filters, dashboards,
+sprints and accounts are as before the run. What is not tested is in
+[What is not covered](#what-is-not-covered). The local site is the product
+itself, Jira Software Data Center 11.3 from the official image: it proves
+nothing about Jira Cloud, whose screens are different, nor about a site with
+other apps, schemes or single sign-on.
+
 ## Requirements
 
 - Node.js 20 or later

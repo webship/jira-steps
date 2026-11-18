@@ -23,9 +23,11 @@
 #
 # What the build leaves on the site (the suite relies on it and never changes it):
 #   accounts   admin (administrator), alex and sam (ordinary users)
-#   projects   SCRUM "Scrum Sample" (Scrum software development, with a board,
-#              a backlog and an active sprint) and KAN "Kanban Sample" (Kanban)
-#   issues     a few named issues in each project, a shared filter and a dashboard
+#   projects   SCRUM "Scrum Sample" (Scrum software development, with a board and
+#              a backlog, no sprint) and KAN "Kanban Sample" (Kanban, with a board)
+#   issues     four named issues in SCRUM and three in KAN, and a filter shared with
+#              every signed-in account ("Sample open issues"); the dashboard is the
+#              System Dashboard of the site
 
 set -euo pipefail
 
