@@ -31,7 +31,7 @@ pull request; see [`.github/workflows/test.yml`](.github/workflows/test.yml).
 ## From nothing to a green run
 
 What the machine needs: git, Docker with the Compose plugin, `curl` and
-`python3` for the site; Node.js 20 or later with npm for the tests; about 4 GB of
+`python3` for the site; Node.js 24 or later with npm for the tests; about 4 GB of
 free memory and about 2 GB of disk for the two container images.
 
 **1. The site.** A local Jira Software Data Center, built by the script of this
@@ -178,7 +178,7 @@ other apps, schemes or single sign-on.
 
 ## Requirements
 
-- Node.js 20 or later
+- Node.js 24 or later
 - A webship-js 2.0 test project (webship-js 2.0.10 or later)
 - A Jira Software Data Center site to test (written against 11.3), with its
   own sign-in form. The steps do not cover Jira Cloud, whose screens are
